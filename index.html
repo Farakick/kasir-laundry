@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cetak Struk Arie Loundry</title>
+    
+    <style>
+        :root { --primary: #4a90e2; --bg: #f4f7f6; --danger: #e74c3c; --success: #2ecc71; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 20px; }
+        
+        /* Layout Utama */
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { text-align: center; margin-top: 0; color: #333; }
+
+        /* Form Styling */
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 0.9em; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        
+        .row { display: flex; gap: 10px; }
+        .col { flex: 1; }
+
+        /* Tombol Tambah */
+        .btn-add { background-color: var(--success); color: white; border: none; padding: 10px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn-add:hover { background-color: #27ae60; }
+
+        /* Tabel Keranjang */
+        .cart-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em; }
+        .cart-table th { text-align: left; border-bottom: 2px solid #eee; padding: 5px; color: #888; }
+        .cart-table td { border-bottom: 1px solid #eee; padding: 8px 5px; }
+        .btn-del { background: var(--danger); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; }
+
+        /* Total Section */
+        .summary-box { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9em; }
+        .summary-total { display: flex; justify-content: space-between; margin-top: 10px; border-top: 2px solid #ddd; padding-top: 10px; font-weight: bold; font-size: 1.2em; color: var(--primary); }
+
+        /* Main Buttons */
+        .btn-print { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; background-color: var(--primary); color: white; font-size: 16px; margin-top: 20px; }
+        .btn-print:disabled { background-color: #ccc; }
+        
+        #statusMsg { text-align: center; font-size: 12px; color: green; display: none; margin-top: 10px; }
+
+        /* --- STRUK PRINT --- */
+        #printableArea { display: none; }
+        @media print {
+            body * { visibility: hidden; }
+            .container { display: none; }
+            #printableArea, #printableArea * { visibility: visible; }
+            #printableArea { display: block; position: absolute; left: 0; top: 0; width: 58mm; font-family: 'Courier New', monospace; font-size: 11px; color: black; }
+            .struk-header, .struk-footer { text-align: center; }
+            .struk-item { margin-bottom: 5px; border-bottom: 1px dashed #ccc; padding-bottom: 2px; }
+            .flex-between { display: flex; justify-content: space-between; }
+            .bold { font-weight: bold; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>🧺 Cetak Struk Arie Loundry</h2>
+
+        <div class="form-group">
+            <label>Nama Pelanggan</label>
+            <input type="text" id="nama" placeholder="Nama Pelanggan...">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+
+        <div style="background: #f0f8ff; padding: 15px; border-radius: 8px;">
+            <div class="form-group">
+                <label>Pilih Layanan</label>
+                <select id="inputLayanan" onchange="autoHarga()">
+                    <option value="Cuci Kering">Cuci Kering (Kg)</option>
+                    <option value="Cuci Basah">Cuci Basah (Kg)</option>
+                    <option value="Setrika">Setrika Saja (Kg)</option>
+                    <option value="Bed Cover">Bed Cover (Pcs)</option>
+                    <option value="Sprei">Sprei (Pcs)</option>
+                    <option value="Jaket">Jaket (Pcs)</option>
+                    <option value="Boneka">Boneka (Pcs)</option>
+                </select>
+            </div>
+
+            <div class="row">
+                <div class="col">
+                    <label>Qty / Berat</label>
+                    <input type="number" id="inputQty" value="1">
+                </div>
+                <div class="col">
+                    <label>Harga Satuan</label>
+                    <input type="number" id="inputHarga" value="5000">
+                </div>
+            </div>
+            <button class="btn-add" onclick="tambahItem()">+ Tambah ke Daftar</button>
+        </div>
+
+        <table class="cart-table">
+            <thead>
+                <tr>
+                    <th>Layanan</th>
+                    <th style="text-align:center;">Qty</th>
+                    <th style="text-align:right;">Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="cartBody">
+                </tbody>
+        </table>
+
+        <div class="summary-box">
+            <div class="summary-row">
+                <span>Subtotal:</span>
+                <span id="txtSubtotal">Rp 0</span>
+            </div>
+            <div class="summary-row" style="align-items: center;">
+                <span>Deposit (DP):</span>
+                <input type="number" id="inputDeposit" placeholder="0" oninput="hitungTotalAkhir()" style="width: 100px; padding: 5px; text-align: right; border: 1px solid #ddd;">
+            </div>
+            <div class="summary-total">
+                <span>Sisa Bayar:</span>
+                <span id="txtTotalAkhir">Rp 0</span>
+            </div>
+        </div>
+
+        <button class="btn-print" id="btnCetak" onclick="prosesTransaksi()">🖨️ Cetak Struk & Simpan</button>
+        <p id="statusMsg">✅ Data tersimpan!</p>
+    </div>
+
+    <div id="printableArea">
+        <div class="struk-header">
+            <h3>Arie Loundru</h3>
+            <p>Graha Surya Indah BLK J.05<br>WA: 0877-8438-8434</p>
+            <p id="struk-date" style="font-size:9px; text-align:left; border-bottom: 1px dashed black; padding-bottom: 5px;"></p>
+        </div>
+        
+        <div style="margin: 5px 0;">
+            <span style="font-size: 10px;">Plg: <b id="struk-nama"></b></span>
+        </div>
+
+        <div id="struk-items-container" style="border-bottom: 1px dashed black; padding-bottom: 5px; margin-bottom: 5px;">
+            </div>
+
+        <div class="flex-between">
+            <span>Subtotal:</span>
+            <span id="struk-subtotal"></span>
+        </div>
+        <div class="flex-between">
+            <span>Deposit:</span>
+            <span id="struk-dp"></span>
+        </div>
+        <div class="flex-between bold" style="margin-top: 5px; font-size: 13px;">
+            <span>TOTAL:</span>
+            <span id="struk-grand-total"></span>
+        </div>
+
+        <div class="struk-footer" style="margin-top:10px;">
+            <p>Terima Kasih!</p>
+        </div>
+    </div>
+
+    <script>
+        // --- KONFIGURASI URL GOOGLE SCRIPT ---
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwt-ySg3pW9CWH4cqFcp83CVVOf4oEDo8MPOI-o6SqpfWO6aN__uKkz3L2VEz1U6upc0Q/exec'; 
+
+        // Variabel Keranjang
+        let keranjang = [];
+
+        function formatRupiah(n) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+        }
+
+        function autoHarga() {
+            const layanan = document.getElementById('inputLayanan').value;
+            const hargaEl = document.getElementById('inputHarga');
+            
+            // Setting Harga Default
+            if(layanan === 'Cuci Kering') hargaEl.value = 5000;
+            else if(layanan === 'Cuci Basah') hargaEl.value = 5000;
+            else if(layanan == 'Setrika')hargaEl.value = 3000;
+            else if(layanan === 'Bed Cover') hargaEl.value = 15000;
+            else if(layanan === 'Sprei') hargaEl.value = 10000;
+            else if(layanan === 'Jaket') hargaEl.value = 5000;
+            else if(layanan === 'Boneka') hargaEl.value = 10000;
+            else hargaEl.value = 0;
+        }
+
+        function tambahItem() {
+            const layanan = document.getElementById('inputLayanan').value;
+            const qty = parseFloat(document.getElementById('inputQty').value) || 0;
+            const harga = parseFloat(document.getElementById('inputHarga').value) || 0;
+
+            if(qty <= 0 || harga <= 0) {
+                alert("Jumlah dan Harga harus diisi!");
+                return;
+            }
+
+            // Masukkan ke array keranjang
+            keranjang.push({
+                layanan: layanan,
+                qty: qty,
+                harga: harga,
+                subtotal: qty * harga
+            });
+
+            renderKeranjang();
+            
+            // Reset input kecil
+            document.getElementById('inputQty').value = 1;
+        }
+
+        function hapusItem(index) {
+            keranjang.splice(index, 1);
+            renderKeranjang();
+        }
+
+        function renderKeranjang() {
+            const tbody = document.getElementById('cartBody');
+            tbody.innerHTML = ''; // Bersihkan tabel
+
+            keranjang.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.layanan}</td>
+                    <td style="text-align:center;">${item.qty}</td>
+                    <td style="text-align:right;">${formatRupiah(item.subtotal)}</td>
+                    <td style="text-align:center;">
+                        <button class="btn-del" onclick="hapusItem(${index})">X</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            hitungTotalAkhir();
+        }
+
+        function hitungTotalAkhir() {
+            // Hitung total belanjaan
+            let totalBelanja = keranjang.reduce((sum, item) => sum + item.subtotal, 0);
+            
+            // Ambil deposit
+            let deposit = parseFloat(document.getElementById('inputDeposit').value) || 0;
+
+            // Hitung sisa bayar
+            let sisaBayar = totalBelanja - deposit;
+
+            // Update Tampilan
+            document.getElementById('txtSubtotal').innerText = formatRupiah(totalBelanja);
+            document.getElementById('txtTotalAkhir').innerText = formatRupiah(sisaBayar);
+        }
+
+        function prosesTransaksi() {
+            const nama = document.getElementById('nama').value;
+            if(keranjang.length === 0) {
+                alert("Keranjang masih kosong!");
+                return;
+            }
+
+            // 1. Siapkan Data Struk
+            const containerStruk = document.getElementById('struk-items-container');
+            containerStruk.innerHTML = ''; // Reset struk
+
+            let totalBelanja = 0;
+            let listLayananString = []; // Untuk Excel
+
+            keranjang.forEach(item => {
+                totalBelanja += item.subtotal;
+                
+                // Tambah ke Struk HTML
+                const div = document.createElement('div');
+                div.className = 'struk-item';
+                div.innerHTML = `
+                    <div style="font-weight:bold;">${item.layanan}</div>
+                    <div class="flex-between">
+                        <span>${item.qty} x ${item.harga}</span>
+                        <span>${formatRupiah(item.subtotal)}</span>
+                    </div>
+                `;
+                containerStruk.appendChild(div);
+
+                // Tambah ke String untuk Excel (Gabung jadi satu kalimat)
+                listLayananString.push(`${item.layanan} (${item.qty})`);
+            });
+
+            const deposit = parseFloat(document.getElementById('inputDeposit').value) || 0;
+            const sisa = totalBelanja - deposit;
+
+            // Isi Data Header Footer Struk
+            document.getElementById('struk-date').innerText = new Date().toLocaleString();
+            document.getElementById('struk-nama').innerText = nama || "Umum";
+            document.getElementById('struk-subtotal').innerText = formatRupiah(totalBelanja);
+            document.getElementById('struk-dp').innerText = deposit > 0 ? "- " + formatRupiah(deposit) : "0";
+            document.getElementById('struk-grand-total').innerText = formatRupiah(sisa);
+
+            // 2. Siapkan Data untuk Google Sheets
+            // Karena Google Sheet kita flat (1 baris per transaksi), kita gabungkan itemnya
+            const dataKirim = {
+                nama: nama || "Umum",
+                layanan: listLayananString.join(", "), // Contoh: "Bed Cover (1), Sprei (2)"
+                total_qty: keranjang.reduce((sum, i) => sum + i.qty, 0),
+                total_harga: totalBelanja,
+                deposit: deposit,
+                sisa_bayar: sisa
+            };
+
+            // 3. Kirim & Print
+            kirimKeGoogle(dataKirim);
+            window.print();
+        }
+
+        function kirimKeGoogle(dataJson) {
+            const btn = document.getElementById('btnCetak');
+            const msg = document.getElementById('statusMsg');
+
+            if (GOOGLE_SCRIPT_URL.includes('PASTE_URL')) {
+                alert("URL Google Script belum dipasang!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Menyimpan...";
+            
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(dataJson)
+            }).then(() => {
+                btn.disabled = false;
+                btn.innerText = "🖨️ Cetak Struk & Simpan";
+                msg.style.display = 'block';
+                // Reset keranjang setelah sukses (opsional)
+                // keranjang = []; renderKeranjang();
+            }).catch(err => {
+                console.error(err);
+                btn.disabled = false;
+            });
+        }
+    </script>
+</body>
+</html>
